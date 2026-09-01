@@ -1,44 +1,38 @@
 # caf
 
-A Go microservice built on Apache Kafka using the IBM Sarama client.
+Небольшой сервис уведомлений на Go и Apache Kafka. Продюсер складывает в топик события трёх типов, email, SMS и push, каждое со своим UUID и временной меткой, а консьюмер читает их в составе consumer group и разбирает по типу. Kafka поднимается рядом через Docker Compose, так что для запуска нужен только Docker и Go.
 
-## Tech Stack
+Писал я это, чтобы разобраться с Sarama на практике, поэтому здесь нет ничего лишнего, зато есть то, что в примерах из документации обычно опускают. Продюсер ждёт подтверждения от всех реплик и повторяет отправку до пяти раз. Консьюмер стартует с самого раннего доступного оффсета и распределяет партиции по round-robin. Оба процесса корректно завершаются по SIGINT и SIGTERM: контекст отменяется, группа закрывается, сообщения не теряются на полпути.
 
-- **Go 1.25** — core language
-- **IBM/sarama** — Kafka client library
-- **Docker / Docker Compose** — containerization
-- **UUID** — event/message identification
+## Стек
 
-## Project Structure
+Go 1.25, клиент IBM/sarama, Docker и Docker Compose для инфраструктуры, google/uuid для идентификаторов событий.
+
+## Структура
 
 ```
-caf/
-├── cmd/        # Application entrypoints
-├── config/     # Configuration (broker addresses, topics, etc.)
-├── internal/   # Business logic and Kafka producers/consumers
-├── docker-compose.yml
-├── go.mod
-└── go.sum
+cmd/        точки входа: producer и consumer
+config/     адреса брокеров, топик, group ID
+internal/   продюсер, консьюмер, модели событий
+docker-compose.yml
 ```
 
-## Getting Started
+## Запуск
 
-**Prerequisites:** Docker, Docker Compose, Go 1.25+
+Понадобятся Docker, Docker Compose и Go 1.25 или новее.
 
 ```bash
 git clone https://github.com/F-YOHS/caf.git
 cd caf
 
-# Start Kafka infrastructure
+# поднять Kafka
 docker-compose up -d
 
-# Run the service
-go run ./cmd/...
+# в одном терминале
+go run ./cmd/consumer
+
+# в другом
+go run ./cmd/producer
 ```
 
-## Configuration
-
-Edit `config/` or set environment variables for:
-- Kafka broker address (default: `localhost:9092`)
-- Topic names
-- Consumer group ID
+Адрес брокера, имя топика и group ID задаются в `config/` или через переменные окружения. По умолчанию брокер ожидается на `localhost:9092`.
